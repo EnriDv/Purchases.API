@@ -3,6 +3,7 @@ using Purchases.API.Application.Interfaces;
 using Purchases.API.Domain.Entities;
 using Purchases.API.Domain.Enums;
 using Purchases.API.Infrastructure.Persistence;
+using Shared.Core.Cen;
 
 namespace Purchases.API.Infrastructure.Repositories;
 
@@ -21,7 +22,7 @@ public class PurchaseOrderRepository : IPurchaseOrderRepository
         return await _ctx.PurchaseOrders
             .Include(o => o.Supplier)
             .Include(o => o.Items)
-            .FirstOrDefaultAsync(o => o.CompanyId == companyId && o.Code == orderCen);
+            .FirstOrDefaultAsync(o => o.CompanyId == companyId && o.Cen == CenParser.ParseRequired(orderCen, "orden de compra"));
     }
 
     public async Task<(List<PurchaseOrder> Items, int TotalCount)> GetPagedAsync(

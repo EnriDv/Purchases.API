@@ -2,6 +2,7 @@ using Purchases.API.Application.DTOs;
 using Purchases.API.Application.Interfaces;
 using Purchases.API.Domain.Entities;
 using Purchases.API.Domain.Enums;
+using Shared.Core.Cen;
 using Shared.Core.Exceptions;
 
 namespace Purchases.API.Application.Services;
@@ -24,7 +25,7 @@ public class PurchaseOrderService : IPurchaseOrderService
         int pageSize,
         bool sortDescending)
     {
-        var companyId = await ResolveCompanyIdAsync(companyCen);
+        var companyId = await PurchasesCenResolver.ResolveCompanyIdAsync(_uow, companyCen);
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 100);
 
@@ -44,24 +45,26 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     public async Task<PurchaseOrderSummaryDto> CreateOrderAsync(string companyCen, CreatePurchaseOrderDto request)
     {
-        var companyId = await ResolveCompanyIdAsync(companyCen);
-        await ValidateWarehouseAsync(companyId, request.WarehouseCen);
-        await ValidateProductsAsync(companyId, request.Items.Select(i => i.ProductCen));
+        var company = await PurchasesCenResolver.ResolveCompanyAsync(_uow, companyCen);
+        await PurchasesCenResolver.ValidateWarehouseAsync(_uow, company.Id, request.WarehouseCen);
+        await PurchasesCenResolver.ValidateProductsAsync(_uow, company.Id, request.Items.Select(i => i.ProductCen));
 
-        var supplier = await ResolveSupplierAsync(companyId, request.SupplierCen);
+        var supplier = await PurchasesCenResolver.ResolveSupplierAsync(_uow, company.Id, request.SupplierCen);
+        var warehouseCen = CenParser.ParseRequired(request.WarehouseCen, "bodega");
 
         var order = new PurchaseOrder
         {
-            CompanyId = companyId,
+            Cen = Guid.NewGuid(),
+            CompanyId = company.Id,
             Code = GenerateOrderCode(),
             SupplierId = supplier.Id,
-            WarehouseCode = request.WarehouseCen,
+            WarehouseCen = warehouseCen,
             Status = PurchaseStatus.Pending,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             Items = request.Items.Select(i => new PurchaseOrderItem
             {
-                ProductCode = i.ProductCen,
+                ProductCen = CenParser.ParseRequired(i.ProductCen, "producto"),
                 Quantity = i.Quantity
             }).ToList()
         };
@@ -71,14 +74,14 @@ public class PurchaseOrderService : IPurchaseOrderService
 
         return new PurchaseOrderSummaryDto
         {
-            OrderCen = order.Code,
+            OrderCen = CenParser.Format(order.Cen),
             Status = order.Status
         };
     }
 
     public async Task<PurchaseOrderDetailDto> GetOrderAsync(string companyCen, string orderCen)
     {
-        var companyId = await ResolveCompanyIdAsync(companyCen);
+        var companyId = await PurchasesCenResolver.ResolveCompanyIdAsync(_uow, companyCen);
         var order = await _uow.PurchaseOrders.GetByCenAsync(companyId, orderCen)
             ?? throw new NotFoundException($"Orden de compra no encontrada: {orderCen}");
 
@@ -87,8 +90,8 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     public async Task<PurchaseOrderConfirmationDto> ConfirmOrderAsync(string companyCen, string orderCen)
     {
-        var companyId = await ResolveCompanyIdAsync(companyCen);
-        var order = await _uow.PurchaseOrders.GetByCenAsync(companyId, orderCen)
+        var company = await PurchasesCenResolver.ResolveCompanyAsync(_uow, companyCen);
+        var order = await _uow.PurchaseOrders.GetByCenAsync(company.Id, orderCen)
             ?? throw new NotFoundException($"Orden de compra no encontrada: {orderCen}");
 
         if (order.Status == PurchaseStatus.Confirmed)
@@ -98,9 +101,9 @@ public class PurchaseOrderService : IPurchaseOrderService
             throw new DomainException("La orden no tiene items para confirmar.");
 
         await _inventory.IncreaseStockAsync(
-            companyCen,
-            order.WarehouseCode,
-            order.Items.Select(i => (i.ProductCode, i.Quantity)),
+            CenParser.Format(company.Cen),
+            CenParser.Format(order.WarehouseCen),
+            order.Items.Select(i => (CenParser.Format(i.ProductCen), i.Quantity)),
             $"PO-{order.Code}");
 
         order.Status = PurchaseStatus.Confirmed;
@@ -111,49 +114,10 @@ public class PurchaseOrderService : IPurchaseOrderService
 
         return new PurchaseOrderConfirmationDto
         {
-            OrderCen = order.Code,
+            OrderCen = CenParser.Format(order.Cen),
             Status = order.Status,
             ConfirmedAt = order.ConfirmedAt.Value
         };
-    }
-
-    private async Task<int> ResolveCompanyIdAsync(string companyCen)
-    {
-        if (!int.TryParse(companyCen, out var id))
-            throw new ValidationException($"CEN de empresa inválido: {companyCen}");
-
-        var company = await _uow.Companies.GetByIdAsync(id);
-        if (company == null || !company.Active)
-            throw new NotFoundException($"Empresa no encontrada: {companyCen}");
-
-        return id;
-    }
-
-    private async Task<Supplier> ResolveSupplierAsync(int companyId, string supplierCen)
-    {
-        var suppliers = await _uow.Suppliers.GetAllAsync(
-            s => s.CompanyId == companyId && s.Code == supplierCen && s.Active);
-        return suppliers.FirstOrDefault()
-            ?? throw new NotFoundException($"Proveedor no encontrado: {supplierCen}");
-    }
-
-    private async Task ValidateWarehouseAsync(int companyId, string warehouseCen)
-    {
-        var warehouses = await _uow.Warehouses.GetAllAsync(
-            w => w.CompanyId == companyId && w.Code == warehouseCen && w.Active);
-        if (!warehouses.Any())
-            throw new NotFoundException($"Bodega no encontrada: {warehouseCen}");
-    }
-
-    private async Task ValidateProductsAsync(int companyId, IEnumerable<string> productCens)
-    {
-        foreach (var productCen in productCens.Distinct())
-        {
-            var products = await _uow.Products.GetAllAsync(
-                p => p.CompanyId == companyId && p.Code == productCen && p.Active);
-            if (!products.Any())
-                throw new NotFoundException($"Producto no encontrado: {productCen}");
-        }
     }
 
     private static string GenerateOrderCode() =>
@@ -161,25 +125,25 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     private static PurchaseOrderListDto MapToListDto(PurchaseOrder o) => new()
     {
-        OrderCen = o.Code,
+        OrderCen = CenParser.Format(o.Cen),
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         ConfirmedAt = o.ConfirmedAt,
-        SupplierCen = o.Supplier?.Code ?? string.Empty,
+        SupplierCen = o.Supplier != null ? CenParser.Format(o.Supplier.Cen) : string.Empty,
         ItemCount = o.Items?.Count ?? 0
     };
 
     private static PurchaseOrderDetailDto MapToDetailDto(PurchaseOrder o) => new()
     {
-        OrderCen = o.Code,
+        OrderCen = CenParser.Format(o.Cen),
         Status = o.Status,
         CreatedAt = o.CreatedAt,
         ConfirmedAt = o.ConfirmedAt,
-        SupplierCen = o.Supplier?.Code ?? string.Empty,
-        WarehouseCen = o.WarehouseCode,
+        SupplierCen = o.Supplier != null ? CenParser.Format(o.Supplier.Cen) : string.Empty,
+        WarehouseCen = CenParser.Format(o.WarehouseCen),
         Items = o.Items.Select(i => new PurchaseOrderDetailItemDto
         {
-            ProductCen = i.ProductCode,
+            ProductCen = CenParser.Format(i.ProductCen),
             Quantity = i.Quantity
         }).ToList()
     };

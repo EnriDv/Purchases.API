@@ -32,7 +32,7 @@ public class InventoryIntegrationService : IInventoryIntegrationService
             reference
         };
 
-        var url = $"/api/inventory/companies/{companyCen}/stock/increase";
+        var url = $"/api/inventory/companies/{Uri.EscapeDataString(companyCen)}/stock/increase";
         var response = await _http.PostAsJsonAsync(url, payload);
 
         if (response.IsSuccessStatusCode)

@@ -123,3 +123,4 @@ C:\Users\dikyd\source\repos\ISW-312\Purchases.API\obj\Debug\net10.0\refint\Purch
 C:\Users\dikyd\source\repos\ISW-312\Purchases.API\obj\Debug\net10.0\Purchases.API.pdb
 C:\Users\dikyd\source\repos\ISW-312\Purchases.API\obj\Debug\net10.0\Purchases.API.genruntimeconfig.cache
 C:\Users\dikyd\source\repos\ISW-312\Purchases.API\obj\Debug\net10.0\ref\Purchases.API.dll
+c:\Users\dikyd\source\repos\ISW-312\Purchases.API\obj\Debug\net10.0\Purchases.API.sourcelink.json

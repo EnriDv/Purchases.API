@@ -2,6 +2,7 @@ namespace Purchases.API.Domain.Entities;
 
 public class Supplier
 {
+    public Guid Cen { get; set; }
     public int Id { get; set; }
     public int CompanyId { get; set; }
     public string Code { get; set; } = string.Empty;
