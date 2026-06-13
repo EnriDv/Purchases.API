@@ -3,7 +3,7 @@ using Purchases.API.Application.Interfaces;
 using Purchases.API.Domain.Entities;
 using Purchases.API.Domain.Enums;
 using Purchases.API.Infrastructure.Persistence;
-using Shared.Core.Cen;
+using Purchases.API.Application.Common;
 
 namespace Purchases.API.Infrastructure.Repositories;
 

@@ -5,7 +5,7 @@ using Purchases.API.Infrastructure.Integrations;
 using Purchases.API.Infrastructure.Persistence;
 using Purchases.API.Infrastructure.Repositories;
 using Scalar.AspNetCore;
-using Shared.Core.Middleware;
+using Purchases.API.Infrastructure.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

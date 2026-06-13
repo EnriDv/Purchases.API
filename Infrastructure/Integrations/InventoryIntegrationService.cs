@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using Purchases.API.Application.Interfaces;
-using Shared.Core.Exceptions;
+using Purchases.API.Domain.Exceptions;
 
 namespace Purchases.API.Infrastructure.Integrations;
 

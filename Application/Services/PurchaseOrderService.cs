@@ -2,8 +2,8 @@ using Purchases.API.Application.DTOs;
 using Purchases.API.Application.Interfaces;
 using Purchases.API.Domain.Entities;
 using Purchases.API.Domain.Enums;
-using Shared.Core.Cen;
-using Shared.Core.Exceptions;
+using Purchases.API.Application.Common;
+using Purchases.API.Domain.Exceptions;
 
 namespace Purchases.API.Application.Services;
 

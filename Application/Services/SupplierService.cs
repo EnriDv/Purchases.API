@@ -1,6 +1,6 @@
 using Purchases.API.Application.DTOs;
 using Purchases.API.Application.Interfaces;
-using Shared.Core.Cen;
+using Purchases.API.Application.Common;
 
 namespace Purchases.API.Application.Services;
 
