@@ -19,7 +19,8 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 
-var inventoryBaseUrl = builder.Configuration["ServiceUrls:InventoryAPI"] ?? "http://localhost:5026";
+var inventoryBaseUrl = builder.Configuration["ServiceUrls:InventoryAPI"]
+    ?? throw new InvalidOperationException("Missing configuration value 'ServiceUrls:InventoryAPI'.");
 builder.Services.AddHttpClient<IInventoryIntegrationService, InventoryIntegrationService>(client =>
 {
     client.BaseAddress = new Uri(inventoryBaseUrl.TrimEnd('/') + "/");

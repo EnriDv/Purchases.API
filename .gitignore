@@ -1,5 +1,8 @@
 .obj
-.bin
+obj
 /obj
+
+.bin
 /bin
+bin
 .env

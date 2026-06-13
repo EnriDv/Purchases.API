@@ -95,7 +95,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             ?? throw new NotFoundException($"Orden de compra no encontrada: {orderCen}");
 
         if (order.Status == PurchaseStatus.Confirmed)
-            throw new ConflictException($"La orden {orderCen} ya está confirmada.");
+            throw new DomainException($"La orden {orderCen} ya está confirmada.", "ORDER_ALREADY_CONFIRMED");
 
         if (!order.Items.Any())
             throw new DomainException("La orden no tiene items para confirmar.");
